@@ -1,0 +1,32 @@
+# ===== 全体 =====
+# 配色は .wezterm.lua の緑蛍光管パレットに合わせてある
+add_newline = false
+
+format = """
+[](fg:#0F4A22)\
+$directory\
+$git_branch\
+$git_status\
+$character
+"""
+
+# ===== ディレクトリ =====
+[directory]
+style = "bg:#0F4A22 fg:#7DFFA0"
+truncation_length = 3
+truncation_symbol = "…/"
+
+# ===== Git =====
+[git_branch]
+symbol = " "
+style = "bg:#155C29 fg:#4AF676"
+
+
+# ===== プロンプト記号 =====
+# 単色 CRT では色で区別できないので、明るさで成否を出し分ける
+[character]
+success_symbol = "[ ❯](fg:#2FBF56)"
+error_symbol   = "[ ❯](fg:#C9FFDA)"
+
+[git_status]
+disabled = true
