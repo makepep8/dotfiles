@@ -1,9 +1,15 @@
 # ===== 全体 =====
-# 配色は .wezterm.lua の緑蛍光管パレットに合わせてある
+# 配色は .wezterm.lua の緑蛍光管パレットに合わせてある。
+#
+# 記号は CP437 (Px437 IBM VGA 8x16 が持つ範囲) だけで組んでいる。
+# Nerd Font のアイコンは正方形なので、セル 8x16 の横 1 セルに収めると
+# 縦が半分になって浮いて見える (.wezterm.lua の font フォールバック参照)。
+# 以前ここで使っていた powerline の  もその一つだったので、
+# CP437 の半ブロック ▐ に置き換えてある。
 add_newline = false
 
 format = """
-[](fg:#0F4A22)\
+[▐](fg:#17701E)\
 $directory\
 $git_branch\
 $git_status\
@@ -11,22 +17,31 @@ $character
 """
 
 # ===== ディレクトリ =====
+# 帯を途切れさせないため、余白はすべてスタイルの内側に入れること。
+# 既定の format は末尾の空白がスタイルの外に出るので、そこだけ
+# 素の背景に戻って帯に 1 セルの隙間ができる。
 [directory]
-style = "bg:#0F4A22 fg:#7DFFA0"
+format = "[$path$read_only ]($style)"
+style = "bg:#17701E fg:#79F283"
 truncation_length = 3
 truncation_symbol = "…/"
+# 既定は絵文字の 🔒。単色管に絵文字が出ると一発で嘘が破れる
+read_only = " ▒"
 
 # ===== Git =====
+# 既定の format は "on [$symbol$branch]($style)" で、"on " が
+# スタイルの外に出る。これも帯の隙間になるので落とす。
 [git_branch]
-symbol = " "
-style = "bg:#155C29 fg:#4AF676"
-
+format = "[$symbol$branch ]($style)"
+symbol = "» "
+style = "bg:#155C1B fg:#39CF45"
 
 # ===== プロンプト記号 =====
 # 単色 CRT では色で区別できないので、明るさで成否を出し分ける
 [character]
-success_symbol = "[ ❯](fg:#2FBF56)"
-error_symbol   = "[ ❯](fg:#C9FFDA)"
+success_symbol = "[ ►](fg:#2CB837)"
+error_symbol   = "[ ►](fg:#C9FFCE)"
+vicmd_symbol   = "[ ◄](fg:#79F283)"
 
 [git_status]
 disabled = true
