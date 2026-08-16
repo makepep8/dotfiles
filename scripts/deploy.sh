@@ -89,6 +89,50 @@ if [ "$CHECK_ONLY" = 1 ]; then
   done
 
   echo
+  echo "--- WezTerm 本体が見ている場所 ---"
+
+  # C:\Users\x と /c/Users/x と /mnt/c/Users/x を比較できる形にそろえる
+  norm_path() {
+    printf '%s' "$1" | tr 'A-Z\\' 'a-z/' \
+      | sed 's|^\([a-z]\):|/\1|; s|^/mnt/\([a-z]\)/|/\1/|; s|//*|/|g; s|/$||'
+  }
+
+  # WezTerm は自分が起動したペインの環境変数に、読み込んだ設定ファイルを入れる
+  if [ -n "${WEZTERM_CONFIG_FILE:-}" ]; then
+    echo "  読み込んでいる設定ファイル: $WEZTERM_CONFIG_FILE"
+    want="$(norm_path "$WEZ_HOME/.wezterm.lua")"
+    got="$(norm_path "$WEZTERM_CONFIG_FILE")"
+    if [ "$want" = "$got" ]; then
+      echo "    -> スクリプトの配置先と一致"
+    else
+      echo "    -> ★ズレています。スクリプトはここに置いています:"
+      echo "         $WEZ_HOME/.wezterm.lua"
+      echo "       WezTerm が読んでいるのは上の設定ファイルなので、そちらに置く必要があります。"
+      rc=1
+    fi
+  else
+    echo "  WEZTERM_CONFIG_FILE が空です。"
+    echo "  = WezTerm のペインの中で実行していないか、WezTerm が設定を1つも読めていません。"
+    echo "  WezTerm のウィンドウの中で実行し直すと、読み込んでいる設定ファイルが分かります。"
+  fi
+
+  # 設定ファイルの場所によらず、WezTerm が home をどこだと思っているかを直接聞く
+  if command -v wezterm >/dev/null 2>&1; then
+    probe="$(mktemp -t wezprobe.XXXXXX.lua 2>/dev/null || echo "${TMPDIR:-/tmp}/wezprobe.lua")"
+    printf "local w = require 'wezterm'\nerror('WEZPROBE_HOME=' .. tostring(w.home_dir))\n" >"$probe"
+    ph="$(wezterm --config-file "$probe" ls-fonts --codepoints 41 2>&1 | tr -d '\000' \
+      | grep -ao 'WEZPROBE_HOME=[^"'"'"']*' | head -1 | sed 's/WEZPROBE_HOME=//')"
+    rm -f "$probe"
+    if [ -n "$ph" ]; then
+      echo "  WezTerm が思っている home: $ph"
+      if [ "$(norm_path "$ph")" != "$(norm_path "$WEZ_HOME")" ]; then
+        echo "    -> ★スクリプトが使っているホームとズレています: $WEZ_HOME"
+        rc=1
+      fi
+    fi
+  fi
+
+  echo
   echo "--- WezTerm から見えているか ---"
   if command -v wezterm >/dev/null 2>&1; then
     wez_out="$(wezterm ls-fonts --list-system 2>&1 | tr -d '\000')"
