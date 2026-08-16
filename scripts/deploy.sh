@@ -89,6 +89,29 @@ if [ "$CHECK_ONLY" = 1 ]; then
   done
 
   echo
+  echo "--- 設定ファイルの優先順位 ---"
+  echo "  WezTerm は上から順に探して、最初に見つかったものだけを読みます。"
+  found_first=0
+  while IFS= read -r cand; do
+    if [ -f "$cand" ]; then
+      if [ "$found_first" = 0 ]; then
+        echo "    [これが読まれる] $cand"
+        found_first=1
+      else
+        echo "    [隠れている]     $cand"
+      fi
+    else
+      echo "    [無し]           $cand"
+    fi
+  done <<EOF
+$(wezterm_config_candidates)
+EOF
+  if [ "$found_first" = 0 ]; then
+    echo "  ★ 候補が1つも存在しません。WezTerm は既定設定で動いています。"
+    rc=1
+  fi
+
+  echo
   echo "--- WezTerm 本体が見ている場所 ---"
 
   # C:\Users\x と /c/Users/x と /mnt/c/Users/x を比較できる形にそろえる
@@ -224,6 +247,20 @@ for entry in "${DOTFILES[@]}"; do
 done
 
 echo
+shadowed="$(shadowed_wezterm_config)"
+if [ -n "$shadowed" ]; then
+  cat <<MSG
+注意: 既存の設定ファイルが読まれなくなります。
+
+  $shadowed
+
+  WezTerm は ~/.wezterm.lua を優先するため、いま置いた設定が使われ、
+  上のファイルは読まれなくなります（消してはいません）。
+  そちらに残したい設定があるなら、.wezterm.lua 側に移してください。
+
+MSG
+fi
+
 if [ ! -f "$FONT_DIR/Px437_IBM_VGA_8x16.ttf" ]; then
   echo "フォントがまだです:  bash \"$REPO/scripts/install-fonts.sh\""
   echo

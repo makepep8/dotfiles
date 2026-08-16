@@ -147,3 +147,26 @@ Nerd Font のグリフは素だと 16px = 2 セル分あって隣に食い込む
 | [Px437 IBM VGA 8x16](https://int10h.org/oldschool-pc-fonts/) | VileR | CC BY-SA 4.0 |
 | [VT323](https://fonts.google.com/specimen/VT323) | Peter Hull | SIL Open Font License 1.1 |
 | [Departure Mono](https://departuremono.com/) | Helena Zhang | SIL Open Font License 1.1 |
+
+## 設定ファイルの優先順位（ハマりどころ）
+
+WezTerm は次の順に探して、**最初に見つかったものだけ**を読む。実測で確認済み。
+
+1. `$WEZTERM_CONFIG_FILE`（環境変数で明示された場合）
+2. `~/.wezterm.lua`  ← このリポジトリが置く場所
+3. `~/.config/wezterm/wezterm.lua`（`$XDG_CONFIG_HOME` があればそちら）
+
+つまり **`~/.config/wezterm/wezterm.lua` を既に持っている環境では、
+`deploy.sh` が置いた `~/.wezterm.lua` の方が優先され、既存の設定が読まれなくなる。**
+`deploy.sh` はこれを検出して警告する（既存ファイルは消さない）。
+残したい設定があるなら `.wezterm.lua` 側へ移すこと。
+
+逆に「配置したのに何も変わらない」場合は、`~/.wezterm.lua` が
+WezTerm の見ているホームに届いていない。WezTerm のウィンドウの中で
+
+```sh
+echo "$WEZTERM_CONFIG_FILE"
+```
+
+を実行すると、実際に読み込まれている設定ファイルの絶対パスが分かる。
+`deploy.sh --check` はこれを含めて自動で突き合わせる。

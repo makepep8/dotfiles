@@ -69,6 +69,21 @@ DOTFILES=(
   '.tmux.conf|shell'
 )
 
+# WezTerm が設定ファイルを探す順序（先に見つかったものだけを読む）。
+# 実測で ~/.wezterm.lua が ~/.config/wezterm/wezterm.lua より優先される。
+# つまり .wezterm.lua を置くと、既存の wezterm.lua は黙って読まれなくなる。
+wezterm_config_candidates() {
+  printf '%s\n' "$WEZ_HOME/.wezterm.lua"
+  printf '%s\n' "${XDG_CONFIG_HOME:-$WEZ_HOME/.config}/wezterm/wezterm.lua"
+}
+
+# 我々が置く .wezterm.lua によって覆い隠される既存の設定ファイル
+shadowed_wezterm_config() {
+  local lower="${XDG_CONFIG_HOME:-$WEZ_HOME/.config}/wezterm/wezterm.lua"
+  [ -f "$lower" ] && printf '%s' "$lower"
+  return 0
+}
+
 target_home() {
   case "$1" in
     wez) printf '%s' "$WEZ_HOME" ;;
