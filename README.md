@@ -1,14 +1,15 @@
 # dotfiles
 
-$HOME をそのままミラーした構成。リポジトリ内の相対パスが、そのまま `$HOME` からの相対パスになる。
+$HOME をミラーした構成。リポジトリ内の相対パスが、そのまま配置先の相対パスになる。
 
 ```
-.wezterm.lua                   -> ~/.wezterm.lua
-.tmux.conf                     -> ~/.tmux.conf
-.config/starship.toml          -> ~/.config/starship.toml
-.config/wezterm/scanlines.png  -> ~/.config/wezterm/scanlines.png
-scripts/install-fonts.sh          CRT フォントを ~/.config/wezterm/fonts/ に取得
-scripts/deploy.sh                 上記を $HOME に配置
+.wezterm.lua                   -> WezTerm が読むホーム
+.config/wezterm/scanlines.png  -> WezTerm が読むホーム
+.tmux.conf                     -> 現在のシェルの $HOME
+.config/starship.toml          -> 現在のシェルの $HOME
+scripts/lib.sh                    配置先を解決する共通処理
+scripts/install-fonts.sh          CRT フォントを取得
+scripts/deploy.sh                 上記を配置 / --check で診断
 ```
 
 ## セットアップ
@@ -18,13 +19,45 @@ git clone git@github.com:makepep8/dotfiles.git
 cd dotfiles
 
 bash scripts/install-fonts.sh   # フォント取得（ネット接続が要る、初回のみ）
-bash scripts/deploy.sh          # $HOME に配置
+bash scripts/deploy.sh          # 配置
+bash scripts/deploy.sh --check  # ちゃんと入ったか診断
 ```
 
-`deploy.sh` は Linux/macOS ではシンボリックリンク、Windows (Git Bash) ではコピーで配置する。
-既存ファイルは `*.bak-YYYYMMDDHHMMSS` に退避してから上書きするので、消える心配はない。
-
 そのあと WezTerm を開き直せば反映される（WezTerm は設定ファイルを自動リロードする）。
+
+### 反映されないとき
+
+まず `bash scripts/deploy.sh --check` を実行する。どこに何が入っていて何が欠けているかが出る。
+
+### WSL を使っている場合の注意（重要）
+
+**WezTerm は Windows アプリなので、WSL のシェルの `$HOME` (`/home/xxx`) ではなく
+Windows 側の `%USERPROFILE%` (`C:\Users\xxx`) を読む。**
+
+リポジトリを WSL 側に clone して WSL のシェルで実行しても問題ない。
+`deploy.sh` と `install-fonts.sh` は WSL 上での実行を検出して、
+WezTerm 関連だけ自動的に Windows 側のホームへ置く。
+
+```
+WSL から実行した場合の行き先:
+  .wezterm.lua / scanlines.png / フォント  -> /mnt/c/Users/xxx/...   (Windows 側)
+  .tmux.conf / starship.toml               -> /home/xxx/...          (WSL 側)
+```
+
+tmux は WSL の中で動くので WSL 側、WezTerm は Windows 側、と使う場所に合わせて振り分けている。
+**WSL を使っているなら WSL のシェルから 1 回実行すれば両方とも正しい場所に入る。**
+
+配置方法は環境ごとに変えている。WSL のシンボリックリンクは Windows アプリから辿れず、
+Git Bash のシンボリックリンクは開発者モードか管理者権限が要るため:
+
+| 実行環境 | WezTerm 関連 | シェル関連 |
+|---|---|---|
+| Linux / macOS | シンボリックリンク | シンボリックリンク |
+| WSL | コピー（Windows 側へ） | シンボリックリンク |
+| Git Bash (Windows) | コピー | コピー |
+
+既存ファイルは `*.bak-YYYYMMDDHHMMSS` に退避してから上書きするので、消える心配はない。
+コピーで配置された環境では、設定をいじったらリポジトリ側にも反映させること。
 
 ### 前提
 
