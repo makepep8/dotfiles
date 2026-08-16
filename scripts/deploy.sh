@@ -54,6 +54,10 @@ echo
 
 # ---------------------------------------------------------------- 診断のみ
 if [ "$CHECK_ONLY" = 1 ]; then
+  # 診断中は「見つからない」が正常な結果なので errexit を切る。
+  # grep はマッチ0件で終了コード1を返すため、pipefail と組み合わさると
+  # 診断結果を表示する前にスクリプトが黙って落ちる。
+  set +e +o pipefail
   rc=0
 
   echo "--- 設定ファイル ---"
@@ -87,13 +91,43 @@ if [ "$CHECK_ONLY" = 1 ]; then
   echo
   echo "--- WezTerm から見えているか ---"
   if command -v wezterm >/dev/null 2>&1; then
-    seen="$(wezterm ls-fonts --list-system 2>/dev/null | tr -d '\000' \
+    wez_out="$(wezterm ls-fonts --list-system 2>&1 | tr -d '\000')"
+
+    if printf '%s' "$wez_out" | grep -qa '^ *Error\|error:'; then
+      echo "  wezterm がエラーを返しました。設定ファイルが壊れている可能性があります:"
+      printf '%s\n' "$wez_out" | grep -a -m5 'Error\|error:' | sed 's/^/    /'
+      rc=1
+    fi
+
+    seen="$(printf '%s' "$wez_out" \
       | grep -aoiE 'px437 ibm vga 8x16|vt323|departure mono' | sort -u | tr '\n' ' ')"
+
     if [ -n "$seen" ]; then
       echo "  認識: $seen"
     else
-      echo "  認識: なし  <-- font_dirs が空か、場所が違う"
+      echo "  認識: なし"
       rc=1
+      echo
+      echo "  WezTerm が実際に見に行った font_dirs:"
+      wez_dirs="$(printf '%s' "$wez_out" | grep -a 'FontDirs' \
+        | sed 's/.*-- //; s/[\\/][^\\/]*, FontDirs.*//' | sort -u)"
+      if [ -n "$wez_dirs" ]; then
+        printf '%s\n' "$wez_dirs" | sed 's/^/    /'
+      else
+        echo "    (1つも無い = font_dirs が空か、指定先が存在しない)"
+      fi
+      echo
+      echo "  スクリプトがフォントを置いた場所:"
+      echo "    $FONT_DIR"
+      if [ -d "$FONT_DIR" ]; then
+        ls -1 "$FONT_DIR" 2>/dev/null | sed 's/^/      /' || echo "      (空)"
+      else
+        echo "      (ディレクトリが存在しない)"
+      fi
+      echo
+      echo "  この2つが食い違っているなら、WezTerm の home_dir と"
+      echo "  スクリプトの \$HOME がズレています。上の font_dirs 側へ"
+      echo "  フォントを置き直してください。"
     fi
   else
     echo "  wezterm コマンドが PATH に無いので確認できません"

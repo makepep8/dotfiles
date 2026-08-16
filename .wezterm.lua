@@ -5,15 +5,44 @@
 local wezterm = require 'wezterm'
 local config = wezterm.config_builder()
 
--- パスは決め打ちにせず home から組み立てる（dotfiles として使い回すため）
-local CFG = wezterm.home_dir:gsub('\\', '/') .. '/.config/wezterm'
 local is_windows = wezterm.target_triple:find 'windows' ~= nil
+
+-- パスは決め打ちにしない（dotfiles として使い回すため）。
+-- home_dir は環境によっては設定ファイルの実際の置き場所とズレることがある
+-- （Git Bash の $HOME がネットワークドライブを指している場合など）ので、
+-- config_dir 起点の候補も並べておく。config_dir は実際に読み込まれた
+-- 設定ファイルのあるディレクトリなので、これだけは絶対にズレない。
+local HOME = wezterm.home_dir:gsub('\\', '/')
+local CDIR = wezterm.config_dir:gsub('\\', '/')
+
+local ASSET_DIRS = {
+  CDIR .. '/.config/wezterm', -- 設定が ~/.wezterm.lua のとき
+  CDIR, -- 設定が ~/.config/wezterm/wezterm.lua のとき
+  HOME .. '/.config/wezterm', -- 従来の決め打ち
+}
+
+-- 最初に見つかったものを返す（無ければ第1候補）
+local function first_existing(paths)
+  for _, p in ipairs(paths) do
+    local fh = io.open(p, 'r')
+    if fh then
+      fh:close()
+      return p
+    end
+  end
+  return paths[1]
+end
 
 -- ---------------------------------------------------------------------
 -- フォント
 -- ---------------------------------------------------------------------
--- ~/.config/wezterm/fonts/ から直接読む（システムへのインストール不要）
-config.font_dirs = { CFG .. '/fonts' }
+-- fonts/ から直接読む（システムへのインストール不要）。
+-- 存在しないディレクトリを並べても WezTerm は黙って無視するので、
+-- 候補を全部渡してどれかに当たればよい方式にしている。
+config.font_dirs = {}
+for _, d in ipairs(ASSET_DIRS) do
+  table.insert(config.font_dirs, d .. '/fonts')
+end
 
 -- Px437 IBM VGA 8x16 は font_size 12.0 のとき ASCII が実測 8px。
 -- MS Gothic は同サイズで全角 16px = ちょうど 2 セルに一致するので、
@@ -113,7 +142,13 @@ config.background = {
   },
   -- 3. 走査線 (2x3px のタイルを敷き詰め)
   {
-    source = { File = CFG .. '/scanlines.png' },
+    source = {
+      File = first_existing {
+        ASSET_DIRS[1] .. '/scanlines.png',
+        ASSET_DIRS[2] .. '/scanlines.png',
+        ASSET_DIRS[3] .. '/scanlines.png',
+      },
+    },
     width = '100%',
     height = '3px',
     repeat_x = 'Repeat',
