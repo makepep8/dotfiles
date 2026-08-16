@@ -60,6 +60,12 @@ if [ "$CHECK_ONLY" = 1 ]; then
   set +e +o pipefail
   rc=0
 
+  # C:\Users\x と /c/Users/x と /mnt/c/Users/x を比較できる形にそろえる
+  norm_path() {
+    printf '%s' "$1" | tr 'A-Z\\' 'a-z/' \
+      | sed 's|^\([a-z]\):|/\1|; s|^/mnt/\([a-z]\)/|/\1/|; s|//*|/|g; s|/$||'
+  }
+
   echo "--- 設定ファイル ---"
   for entry in "${DOTFILES[@]}"; do
     rel="${entry%%|*}"
@@ -92,16 +98,18 @@ if [ "$CHECK_ONLY" = 1 ]; then
   echo "--- 設定ファイルの優先順位 ---"
   echo "  WezTerm は上から順に探して、最初に見つかったものだけを読みます。"
   found_first=0
+  first_cand=''
   while IFS= read -r cand; do
     if [ -f "$cand" ]; then
       if [ "$found_first" = 0 ]; then
-        echo "    [これが読まれる] $cand"
+        echo "    [本来これが読まれる] $cand"
+        first_cand="$cand"
         found_first=1
       else
-        echo "    [隠れている]     $cand"
+        echo "    [隠れている]         $cand"
       fi
     else
-      echo "    [無し]           $cand"
+      echo "    [無し]               $cand"
     fi
   done <<EOF
 $(wezterm_config_candidates)
@@ -111,14 +119,25 @@ EOF
     rc=1
   fi
 
+  # WEZTERM_CONFIG_FILE は探索順を完全に無視して勝つ（実測で確認済み）。
+  # ただし WezTerm は自分が起動したペインにこの変数を必ず出力するので、
+  # 「値が入っていること」自体は上書きの証拠にならない。
+  # 本来読まれるはずの候補と食い違っている場合だけが、本物の上書き。
+  if [ -n "${WEZTERM_CONFIG_FILE:-}" ] && [ -n "$first_cand" ]; then
+    if [ "$(norm_path "$WEZTERM_CONFIG_FILE")" != "$(norm_path "$first_cand")" ]; then
+      echo
+      echo "  ★ WEZTERM_CONFIG_FILE で上書きされています。"
+      echo "       本来読まれるはず: $first_cand"
+      echo "       実際に読んでいる: $WEZTERM_CONFIG_FILE"
+      echo "     この環境変数は探索順を無視して優先されます。"
+      echo "     どこで設定されているか (Windows のユーザー環境変数 / シェルの rc /"
+      echo "     WezTerm のショートカットの --config-file) を確認して外してください。"
+      rc=1
+    fi
+  fi
+
   echo
   echo "--- WezTerm 本体が見ている場所 ---"
-
-  # C:\Users\x と /c/Users/x と /mnt/c/Users/x を比較できる形にそろえる
-  norm_path() {
-    printf '%s' "$1" | tr 'A-Z\\' 'a-z/' \
-      | sed 's|^\([a-z]\):|/\1|; s|^/mnt/\([a-z]\)/|/\1/|; s|//*|/|g; s|/$||'
-  }
 
   # WezTerm は自分が起動したペインの環境変数に、読み込んだ設定ファイルを入れる
   if [ -n "${WEZTERM_CONFIG_FILE:-}" ]; then

@@ -170,3 +170,22 @@ echo "$WEZTERM_CONFIG_FILE"
 
 を実行すると、実際に読み込まれている設定ファイルの絶対パスが分かる。
 `deploy.sh --check` はこれを含めて自動で突き合わせる。
+
+### `WEZTERM_CONFIG_FILE` による上書き
+
+この環境変数が設定されていると、**上の探索順を完全に無視して**そのファイルが読まれる
+（実測で確認済み。コマンドラインの `--config-file` はさらにそれより強い）。
+
+ハマりどころとして、**WezTerm は自分が起動したペインにこの変数を必ず出力する**。
+そのためペインの中で値が入っていること自体は上書きの証拠にならない。
+本来読まれるはずの候補と食い違っている場合だけが本物の上書きで、
+`deploy.sh --check` はその判定をしてくれる。
+
+永続設定されていないかを直接見るなら PowerShell で:
+
+```powershell
+[Environment]::GetEnvironmentVariable('WEZTERM_CONFIG_FILE','User')
+[Environment]::GetEnvironmentVariable('WEZTERM_CONFIG_FILE','Machine')
+```
+
+WezTerm のショートカットに `--config-file` が付いていないかも確認する。
