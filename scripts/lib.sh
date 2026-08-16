@@ -65,6 +65,7 @@ resolve_homes() {
 DOTFILES=(
   '.wezterm.lua|wez'
   '.config/wezterm/scanlines.png|wez'
+  '.config/wezterm/vignette.png|wez'
   '.config/starship.toml|shell'
   '.tmux.conf|shell'
 )

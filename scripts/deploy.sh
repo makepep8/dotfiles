@@ -6,9 +6,9 @@
 #   bash scripts/deploy.sh --check    配置せず、現状を診断するだけ
 #
 # 配置先はファイルごとに違う (scripts/lib.sh の DOTFILES 参照)。
-#   .wezterm.lua / scanlines.png  -> WezTerm が読むホーム
-#                                    WSL から実行した場合は Windows 側の C:\Users\xxx
-#   .tmux.conf / starship.toml    -> 現在のシェルの $HOME
+#   .wezterm.lua / 背景画像 (*.png)  -> WezTerm が読むホーム
+#                                       WSL から実行した場合は Windows 側の C:\Users\xxx
+#   .tmux.conf / starship.toml       -> 現在のシェルの $HOME
 #
 # シンボリックリンクにするかコピーにするか:
 #   unix    : リンク（編集がそのままリポジトリに反映される）
