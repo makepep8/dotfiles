@@ -1,25 +1,41 @@
 #!/usr/bin/env bash
 #
-# WezTerm の CRT テーマが使うフォントを ~/.config/wezterm/fonts/ に取ってくる。
+# WezTerm の CRT テーマが使うフォントを取ってくる。
+#
+# 置き場所は「WezTerm が読むホーム」= WEZ_HOME。
+# WSL から実行した場合は Windows 側の C:\Users\xxx\.config\wezterm\fonts に入る。
+# WSL の $HOME に入れても WezTerm (Windows アプリ) からは見えないため。
 #
 # システムのフォントとしてはインストールしない。.wezterm.lua の font_dirs が
 # このディレクトリを直接読むので、フォルダごと消せば綺麗に元に戻る。
 #
 set -euo pipefail
 
-DEST="${HOME}/.config/wezterm/fonts"
+# shellcheck source=lib.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
+resolve_homes
+
+DEST="${WEZ_HOME}/.config/wezterm/fonts"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-mkdir -p "$DEST"
-
 need() {
-  command -v "$1" >/dev/null 2>&1 || { echo "エラー: $1 が必要です" >&2; exit 1; }
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "エラー: $1 が必要です" >&2
+    exit 1
+  }
 }
 need curl
 need unzip
 
-echo "==> 配置先: $DEST"
+mkdir -p "$DEST"
+
+echo "==> 実行環境: $PLATFORM"
+echo "==> 配置先:   $DEST"
+if [ "$PLATFORM" = wsl ]; then
+  echo "    (WSL から実行しているので Windows 側のホームに入れます)"
+fi
+echo
 
 # --- Px437 IBM VGA 8x16 (既定で使うフォント) -------------------------------
 # The Ultimate Oldschool PC Font Pack v2.2 / CC BY-SA 4.0 / VileR (int10h.org)
@@ -58,5 +74,5 @@ echo
 echo "完了。以下が入りました:"
 ls -1 "$DEST"
 echo
-echo "WezTerm が認識しているか確認するには:"
+echo "WezTerm が認識しているか確認するには (WezTerm のある環境で):"
 echo "  wezterm ls-fonts --list-system | grep -Ei 'px437|vt323|departure'"
